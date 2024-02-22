@@ -1,0 +1,15 @@
+{
+  "name": "youtube-backend",
+  "version": "1.0.0",
+  "description": "this is javascript backend project",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon ./src/index.js"
+  },
+  "author": "Aniket shrivastava",
+  "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^3.0.3"
+  }
+}
