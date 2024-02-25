@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js"
 import { User } from "../model/user.model.js";
-import { uploadonCloudinary } from "../cloudinary.js";
+import { uploadonCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js"
 
 const registerUser = asyncHandler(async (req, res) => {
@@ -29,16 +29,30 @@ const registerUser = asyncHandler(async (req, res) => {
     if (exitedUser) {
         throw new ApiError(409, "User with email or username is already exits")
     }
+    // console.log(req.files)
 
-    const avatarLocalPath = req.files?.avatar[0]?.path
-    const coverImagePath = req.files?.coverImage[0]?.path
+    const avatarLocalPath = req.files?.avatar[0]?.path;
+    // const coverImagePath = req.files?.coverImage[0]?.path;
+
+
+    let coverImagePath;
+    if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0){
+         coverImagePath = req.files.coverImage[0].path
+    }
+
+    // console.log(avatarLocalPath)
+    // console.log(coverImagePath)
+
 
     if (!avatarLocalPath) {
         throw new ApiError(400, "Avatar files is required")
     }
 
-    const avatar = uploadonCloudinary(avatarLocalPath)
-    const coverImage = uploadonCloudinary(coverImagePath)
+    const avatar = await uploadonCloudinary(avatarLocalPath)
+    const coverImage = await uploadonCloudinary(coverImagePath)
+    console.log(avatar)
+    console.log(coverImage)
+
 
     if (!avatar) {
         throw new ApiError(400, "Avatar file is require")
@@ -52,6 +66,7 @@ const registerUser = asyncHandler(async (req, res) => {
         password,
         username: username.toLowerCase()
     })
+    console.log(user)
 
     const createdUser = await User.findById(user._id).select(
         "-password -refreshToken"
