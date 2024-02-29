@@ -4,6 +4,21 @@ import { User } from "../model/user.model.js";
 import { uploadonCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js"
 
+const generateAccessAndRefreshToken = async(userId)=>{
+ try {
+     const user = await User.findById(userId)
+      const accessToken = user.generateAccessToken()
+      const refreshToken = user.refreshAccessToken()
+   
+      user.refreshToken = refreshToken
+     await user.save({ValidatioBeforeSave:false})
+   
+     return{accessToken,refreshToken}
+ } catch (error) {
+    throw new ApiError(500,"Somethind went wrong while generating refresh and access token")
+ }
+}
+
 const registerUser = asyncHandler(async (req, res) => {
     // get user details from frontend
     // validation - not empty
@@ -36,8 +51,8 @@ const registerUser = asyncHandler(async (req, res) => {
 
 
     let coverImagePath;
-    if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0){
-         coverImagePath = req.files.coverImage[0].path
+    if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
+        coverImagePath = req.files.coverImage[0].path
     }
 
     // console.log(avatarLocalPath)
@@ -79,4 +94,53 @@ const registerUser = asyncHandler(async (req, res) => {
     )
 }
 )
-export { registerUser }
+const loginUser = asyncHandler(async (req, res) => {
+
+
+    const { email, username, password } = req.body
+    console.log(email, username)
+
+    if (!email && !username) {
+        throw new ApiError(401, "Email and Username is required")
+    }
+
+    const user = await User.findOne({
+        $or: [{ username }, { email }]
+    })
+    if (!user) {
+        throw new ApiError(404, "User does not exit")
+    }
+
+    const isValidPassword = await user.isPasswordCorrect(password)
+    if (!isValidPassword) {
+        throw new ApiError(404, "Invalid user credential")
+    }
+
+    const{accessToken,refreshToken} = await generateAccessAndRefreshToken(user._id)
+     
+    const loggedInuser = await User.findById(user._id).select("-password,-refreshToken")
+
+    const options = {
+        httpOnly:true,
+        secure:true
+    }
+
+    return res
+    .status(200)
+    .cookie("accessToken", accessToken,options)
+    .cookie("refreshToken", refreshTokenToken,options)
+    .json(
+        new ApiResponse(200,
+            {
+                user:loggedInuser,accessToken,refreshToken
+            },
+            "User is loggedIn successfully"
+            )
+    )
+
+
+})
+export {
+    registerUser,
+    loginUser
+}
